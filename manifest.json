@@ -1,0 +1,21 @@
+{
+  "domain": "color_palette",
+  "name": "Color Palette",
+  "documentation": "https://github.com/your_username/color_palette",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["your_username"],
+  "version": "1.0.0",
+  "description": "Custom integration to add a color palette for smart lights.",
+  "config_flow": false,
+  "requirements": [],
+  "domain": "color_palette",
+  "frontend": false,
+  "config_flow": false,
+  "translations": true,
+  "documentation": "https://github.com/your_username/color_palette",
+  "issue_tracker": "https://github.com/suurislay/Home-Assistant-Light-Color-Palette/issues",
+  "homeassistant": ">=2022.4.0",
+  "codeowners": ["suurislay"],
+  "after_dependencies": ["light"]
+}
