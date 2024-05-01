@@ -1,0 +1,171 @@
+"""
+Custom component to add a color palette for smart lights in Home Assistant.
+"""
+import logging
+import voluptuous as vol
+
+from homeassistant.helpers.entity import Entity
+import homeassistant.helpers.config_validation as cv
+from homeassistant.components.light import (
+    ATTR_RGB_COLOR, ATTR_HS_COLOR, ATTR_COLOR_TEMP, SUPPORT_COLOR, LightEntity
+)
+from homeassistant.const import (
+    ATTR_ENTITY_ID, ATTR_NAME, CONF_ENTITIES, CONF_NAME, STATE_ON
+)
+
+DOMAIN = 'color_palette'
+ENTITY_ID_FORMAT = DOMAIN + '.{}'
+
+CONF_COLOR_LIST = 'color_list'
+
+_LOGGER = logging.getLogger(__name__)
+
+COLOR_SCHEMA = vol.Schema(vol.All(list, [vol.Any(str, list)]))
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                vol.Required(CONF_ENTITIES): cv.entity_ids,
+                vol.Optional(CONF_NAME, default="Color Palette"): cv.string,
+                vol.Required(CONF_COLOR_LIST): COLOR_SCHEMA,
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
+
+async def async_setup(hass, config):
+    """Set up the color palette."""
+    color_palette_config = config.get(DOMAIN, {})
+    entities = color_palette_config.get(CONF_ENTITIES, [])
+    name = color_palette_config.get(CONF_NAME)
+    color_list = color_palette_config.get(CONF_COLOR_LIST)
+
+    color_palette = ColorPalette(name, entities, color_list)
+    hass.data[DOMAIN] = color_palette
+
+    for entity in entities:
+        hass.async_create_task(color_palette.async_add_entity(entity))
+
+    return True
+
+
+class ColorPalette(Entity):
+    """Representation of a Color Palette."""
+
+    def __init__(self, name, entities, color_list):
+        """Initialize the Color Palette."""
+        self._name = name
+        self._entities = entities
+        self._color_list = color_list
+        self._available = True
+
+    async def async_add_entity(self, entity_id):
+        """Add entity to the list of controlled entities."""
+        entity = self.hass.states.get(entity_id)
+        if entity is None:
+            _LOGGER.warning("Entity %s does not exist, ignoring", entity_id)
+            return
+        if entity.domain != 'light':
+            _LOGGER.warning("Entity %s is not a light, ignoring", entity_id)
+            return
+
+        await self.async_update_entity(entity_id)
+
+    async def async_update_entity(self, entity_id):
+        """Update entity state."""
+        entity = self.hass.states.get(entity_id)
+        if entity is None:
+            return
+
+        if entity.state == STATE_ON:
+            self._available = True
+        else:
+            self._available = False
+
+    @property
+    def name(self):
+        """Return the name of the color palette."""
+        return self._name
+
+    @property
+    def available(self):
+        """Return if the color palette is available."""
+        return self._available
+
+    @property
+    def state(self):
+        """Return the state of the color palette."""
+        return None
+
+    @property
+    def supported_features(self):
+        """Flag supported features."""
+        return SUPPORT_COLOR
+
+    @property
+    def hs_color(self):
+        """Return the HS color."""
+        return None
+
+    @property
+    def rgb_color(self):
+        """Return the RGB color."""
+        return None
+
+    @property
+    def color_temp(self):
+        """Return the color temperature."""
+        return None
+
+    async def async_turn_on(self, **kwargs):
+        """Turn on the color palette."""
+        for entity_id in self._entities:
+            await self.hass.services.async_call(
+                'light', 'turn_on', {
+                    ATTR_ENTITY_ID: entity_id,
+                    **kwargs
+                }, blocking=True
+            )
+
+    async def async_turn_off(self, **kwargs):
+        """Turn off the color palette."""
+        for entity_id in self._entities:
+            await self.hass.services.async_call(
+                'light', 'turn_off', {
+                    ATTR_ENTITY_ID: entity_id,
+                    **kwargs
+                }, blocking=True
+            )
+
+    async def async_set_hs_color(self, hs_color):
+        """Set HS color."""
+        for entity_id in self._entities:
+            await self.hass.services.async_call(
+                'light', 'turn_on', {
+                    ATTR_ENTITY_ID: entity_id,
+                    ATTR_HS_COLOR: hs_color,
+                }, blocking=True
+            )
+
+    async def async_set_rgb_color(self, rgb_color):
+        """Set RGB color."""
+        for entity_id in self._entities:
+            await self.hass.services.async_call(
+                'light', 'turn_on', {
+                    ATTR_ENTITY_ID: entity_id,
+                    ATTR_RGB_COLOR: rgb_color,
+                }, blocking=True
+            )
+
+    async def async_set_color_temp(self, color_temp):
+        """Set color temperature."""
+        for entity_id in self._entities:
+            await self.hass.services.async_call(
+                'light', 'turn_on', {
+                    ATTR_ENTITY_ID: entity_id,
+                    ATTR_COLOR_TEMP: color_temp,
+                }, blocking=True
+            )
