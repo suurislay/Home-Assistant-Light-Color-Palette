@@ -1,1 +1,1 @@
-This is my firs git hub project please try it out thanks
+This is my firs github project please try it out, thanks
